@@ -1,0 +1,2 @@
+#N canvas 10 45 945 991 12;
+#X obj 27 130 phrase-sender;
