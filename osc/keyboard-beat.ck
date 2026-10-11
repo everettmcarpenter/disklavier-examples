@@ -1,14 +1,14 @@
-public class Beat extends Event
+class Beat extends Event
 {
     dur length;
     int div;
 }
 
-0 => int debug;
+1 => int debug;
 1213 => int PORT;
 4 => int MAX_PHRASE_SIZE;
 12 => int RANDOM_INTERVAL;
-0.9 => float NOTE_LENGTH; // the higher the number, normalized to [0.0,1.0] ( 1.0 is full beat)
+0.25 => float NOTE_LENGTH; // the higher the number, normalized to [0.0,1.0] ( 1.0 is full beat)
 
 // osc
 OscIn oin;
@@ -16,16 +16,14 @@ oin.port( PORT ); oin.addAddress( "/pd" );
 OscMsg msg;
 // keyboard
 MidiOut midout;
-// mouse
-Hid mouse;
-HidMsg mmsg;
+
 // device #
-0 => int midiDevice;
+1 => int midiDevice;
 // mouse
 float x; float y;
 // this is the magnitude of randomized note length
 float magnitudeOfRandomizedNoteLength;
-( 1.0 / 98.0 )::minute => dur beatLength; // length of a beat
+( 1.0 / 128.0 )::minute => dur beatLength; // length of a beat
 float fractions[10]; // fractions of beats
 int RANDOM_INTERVALS[10];
 int BEAT_LENGTHS[10]; 
@@ -54,7 +52,11 @@ for( int i; i < 10; i++ )
 }
 
 // listen
-spork ~ mouseShred();
+spork ~ 
+    mouseShred();
+
+spork ~ 
+    keyShred();
 
 // keep time 
 for( int i; i < beats.size(); i++ )
@@ -89,7 +91,7 @@ while( true )
 
 			if( debug )
 			{
-				chout <= "Cell " <= myId <= IO.nl();
+				chout <= "Cell " <= myId + 1 <= IO.nl();
 				if( play )
 				{
 					chout <= lengthIdx <= " notes long, playing back at " <= 1.0 / ( rate + 1 ) <= " the quarter note." <= IO.nl();
@@ -109,12 +111,12 @@ fun void signalWatch( int id )
         // length
         PHRASE_LENGTHS[id] => int phraseLength;
         // 12 => int phraseLength;
-        int phrase[phraseLength];
+        int phrase[0];
         // always start on the same note
         phrase << scale[id];
         // create it
         for( 1 => int i; i < phraseLength; i++ ) 
-            phrase[i] << scale[Math.random2( 0, scale.size() - 1 )];    
+            phrase << scale[Math.random2( 0, scale.size() - 1 )];    
 
         if( states[id] )
         {
@@ -122,6 +124,7 @@ fun void signalWatch( int id )
             {
                 BEAT_LENGTHS[id] => int beatDex;
                 beats[beatDex] => now;
+                // beats[0].length * y => now;
                 // play back the phrase till we say not to
                 for( int i; i < phraseLength; i++ )
                 {
@@ -141,7 +144,7 @@ fun void signalWatch( int id )
 
 fun void note( int note, int velocity, dur length, MidiOut @ output )
 {
-    // <<< "Note on: ", note >>>;
+    <<< "Note on: ", note >>>;
     noteOn( note, velocity, output );
     length => now;
     noteOff( note, 0, output );
@@ -176,6 +179,10 @@ fun void noteOff( int midinote, int velocity, MidiOut @ output )
 
 fun void mouseShred()
 {
+    // mouse
+    Hid mouse;
+    HidMsg mmsg;
+
 	// open mouse 0, exit on fail
 	if( !mouse.openMouse( 0 ) ) me.exit();
 	<<< "mouse '" + mouse.name() + "' ready", "" >>>;
@@ -190,6 +197,38 @@ fun void mouseShred()
 		 		mmsg.scaledCursorX => x => magnitudeOfRandomizedNoteLength;	
 		 		1.0 - mmsg.scaledCursorY => y;	
 		 	}
+		}
+		1024::samp => now; 
+	}
+}
+
+fun void keyShred()
+{
+    // keyboard
+    Hid hi;
+    HidMsg kmsg;
+
+    // open keyboard (get device number from command line)
+    if( !hi.openKeyboard( 0 ) ) me.exit();
+    cherr <= "keyboard '" <= hi.name() <= "' ready" <= "" <= IO.newline();
+
+	while( true )
+	{
+		hi => now;
+		while( hi.recv( kmsg ) )
+		{
+		 	if( kmsg.isButtonDown() )
+		 	{
+		 		if( kmsg.which == 57 )
+                    cc( 64, 127, midout );
+                else if( kmsg.which == 1 )
+                    me.exit();
+		 	}
+            else if( kmsg.isButtonUp() )
+            {
+                if( kmsg.which == 57 )
+                    cc( 64, 0, midout );
+            }
 		}
 		1024::samp => now; 
 	}
