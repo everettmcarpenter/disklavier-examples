@@ -41,7 +41,7 @@ Event signal[127];
 BlitVoice blts[127];
 // notes that are actively on, whether through human input or computer
 int noteOn[127];
-// synth on
+// synths that are on
 int synthOn[127];
 // color array
 vec3 colors[127];
