@@ -1,0 +1,3 @@
+[submodule "rave-models"]
+	path = rave-models
+	url = https://huggingface.co/Intelligent-Instruments-Lab/rave-models
